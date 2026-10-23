@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>para ti · backstage</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="art/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink: #3b2a1a; --gold: #b9862f; --wax: #a3211f; --paper: #f6ecd6; --line: #d8c197; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #efe0bd; color: var(--ink); font: 16px/1.45 'IM Fell English', Georgia, serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 24px 16px 80px; }
+    h1, h2, h3 { font-family: 'IM Fell English SC', serif; font-weight: normal; letter-spacing: .08em; margin: 0 0 10px; }
+    h1 { font-size: 28px; display: flex; align-items: center; gap: 10px; }
+    h1 img { width: 44px; height: 44px; border-radius: 10px; }
+    section { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin: 18px 0; }
+    label { display: block; font-size: 14px; margin: 12px 0 4px; font-style: italic; }
+    input, select, textarea { width: 100%; font: inherit; padding: 9px 10px; border: 1px solid #c9b07d; border-radius: 8px; background: #fffaf0; color: var(--ink); }
+    textarea { min-height: 220px; font-family: 'Caveat', cursive; font-size: 22px; line-height: 1.35; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .row > * { flex: 1; min-width: 140px; }
+    button { font: inherit; cursor: pointer; border-radius: 22px; padding: 9px 18px; border: 1.5px solid var(--gold); background: linear-gradient(#f6e9c9, #dcc08a); color: var(--ink); }
+    button.plain { background: none; border-color: transparent; text-decoration: underline; padding: 6px 8px; }
+    button.danger { color: var(--wax); }
+    .muted { opacity: .7; font-size: 14px; }
+    .item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+    .item:last-child { border-bottom: 0; }
+    .item img { width: 44px; height: 44px; object-fit: contain; }
+    .item .tx { flex: 1; }
+    .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; background: #e6d3a6; margin-left: 6px; }
+    .pill.ready { background: #f3c9a0; } .pill.opened { background: #cfe0b8; }
+    .only { display: none; }
+    [data-type="letter"] .only.letter, [data-type="place"] .only.place, [data-type="gift"] .only.gift { display: block; }
+    .note { padding: 10px 0; border-bottom: 1px dashed var(--line); }
+    .note .t { font-family: 'Caveat', cursive; font-size: 22px; white-space: pre-wrap; }
+    .media { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .media img.thumb { max-height: 90px; border-radius: 6px; }
+    .msg { min-height: 22px; font-style: italic; margin-top: 10px; }
+    .rec-on { background: #f2b6ad; }
+    audio { max-width: 100%; }
+  </style>
+</head>
+<body>
+<main>
+  <h1><img src="art/icon-192.png" alt="">para ti · backstage</h1>
+
+  <section id="gate" hidden>
+    <h2>Your key</h2>
+    <p class="muted">Paste the admin key once; this browser remembers it.</p>
+    <div class="row"><input id="key" type="password"><button id="keygo" style="flex:0">Enter</button></div>
+    <div class="msg" id="gatemsg"></div>
+  </section>
+
+  <div id="main" hidden>
+    <section>
+      <h2>Surprises</h2>
+      <div id="list"></div>
+      <p><button id="new">＋ New surprise</button></p>
+    </section>
+
+    <section id="editor" hidden data-type="letter">
+      <h2 id="edtitle">New surprise</h2>
+      <div class="row">
+        <div><label>Kind</label>
+          <select id="type"><option value="letter">Letter</option><option value="place">Place</option><option value="gift">Gift</option></select></div>
+        <div style="flex:2"><label>Title (she sees this before it opens)</label><input id="title" placeholder="A letter for you"></div>
+      </div>
+      <div class="row">
+        <div><label>Opens on</label><input id="date" type="date"></div>
+        <div><label>at</label><input id="time" type="time" value="09:00"></div>
+        <div><label>her time zone</label><select id="tz"></select></div>
+      </div>
+      <p class="muted" id="when"></p>
+
+      <label>The words</label>
+      <textarea id="body" placeholder="My love…"></textarea>
+      <div class="only letter"><label>Sign-off</label><input id="signoff" placeholder="— always yours"></div>
+
+      <div class="only place">
+        <div class="row">
+          <div><label>Place name</label><input id="pname" placeholder="The Greenhouse Café"></div>
+          <div><label>Address</label><input id="paddr" placeholder="123 Willow Lane"></div>
+        </div>
+        <label>Maps link (optional, otherwise built from the address)</label><input id="purl">
+      </div>
+
+      <div class="only gift">
+        <div class="row">
+          <div style="flex:2"><label>Gift link</label><input id="gurl" placeholder="https://…"></div>
+          <div><label>Button words</label><input id="glabel" placeholder="Open your gift"></div>
+        </div>
+        <label>Code (gift card, coupon…)</label><input id="gcode">
+      </div>
+
+      <div class="row" style="margin-top:16px">
+        <div>
+          <h3>Photo</h3>
+          <div class="media" id="photoNow"></div>
+          <input id="photo" type="file" accept="image/*">
+          <p class="muted">Resized on the way up. HEIC works in Safari; in Chrome use a JPG.</p>
+        </div>
+        <div>
+          <h3>Voice note</h3>
+          <div class="media" id="audioNow"></div>
+          <div class="media"><button id="rec">● Record</button><span id="rectime" class="muted"></span></div>
+          <div id="recPreview"></div>
+          <label>…or upload a Voice Memo (.m4a)</label><input id="audio" type="file" accept="audio/*">
+          <p class="muted">Voice Memos (.m4a) play on every iPhone. Record here in Safari for the same.</p>
+        </div>
+      </div>
+
+      <p style="margin-top:18px"><button id="save">Save surprise</button> <button class="plain" id="cancel">close</button> <button class="plain danger" id="del" hidden>delete</button></p>
+      <div class="msg" id="edmsg"></div>
+    </section>
+
+    <section>
+      <h2>Notes from her</h2>
+      <div id="notes"><p class="muted">Nothing yet.</p></div>
+    </section>
+
+    <section>
+      <h2>Little bells</h2>
+      <p class="muted" id="subs"></p>
+      <button id="testpush">Ring a test bell</button> <span class="msg" id="pushmsg"></span>
+    </section>
+  </div>
+</main>
+<script src="config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

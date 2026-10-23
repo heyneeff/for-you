@@ -1,0 +1,20 @@
+# For You — backend. Deploy: npx wrangler deploy (from this folder).
+# Secrets (never in git): RECIPIENT_KEY, ADMIN_KEY, VAPID_PRIVATE_JWK
+#   npx wrangler secret put RECIPIENT_KEY
+name = "for-you-api"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "DATA"
+id = "8b260d4bc4a74fdaaadcb4681673d6a8"
+
+# Check every minute for surprises that just unlocked, and ring the bell.
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+ALLOWED_ORIGINS = "https://heyneeff.github.io"
+VAPID_PUBLIC = "BI0NJdheaDHuYwAz9T0TRK3CNm9zMPTi9m0xBwNV536tOClWNxpnaw6DPRqWMqC6dDEFUDUQLJEqwf-zDoXPc7s"
+VAPID_SUBJECT = "https://heyneeff.github.io/for-you/"
