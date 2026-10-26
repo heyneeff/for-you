@@ -5,6 +5,7 @@
 //   items        JSON array of surprises (no photo bytes)
 //   photo:<id>   image bytes, metadata { type }
 //   notes        JSON array of little notes she leaves
+//   vnote:<id>   her voice notes; nphoto:<id> photos she sends back
 //   opened       JSON object { <itemId>: isoTime } — when she first opened each
 //   subs         JSON array of web-push subscriptions
 //
@@ -89,8 +90,8 @@ async function route(req, env) {
   // ---- admin ----
   if (path.startsWith('/api/admin')) {
     if (!(isAdmin || (adminViaQuery && req.method === 'GET'))) return json({ error: 'nope' }, 401);
-    const vn = path.match(/^\/api\/admin\/voice\/([\w-]+)$/);
-    if (vn && req.method === 'GET') return serveMedia(req, env, `vnote:${vn[1]}`);
+    const vn = path.match(/^\/api\/admin\/(voice|nphoto)\/([\w-]+)$/);
+    if (vn && req.method === 'GET') return serveMedia(req, env, `${vn[1] === 'voice' ? 'vnote' : 'nphoto'}:${vn[2]}`);
     return adminRoute(req, env, path);
   }
 
@@ -138,14 +139,17 @@ async function route(req, env) {
     return json({ ok: true });
   }
 
-  if (path === '/api/notes/voice' && req.method === 'POST') {
+  // A voice note or a photo she sends back.
+  const up = path.match(/^\/api\/notes\/(voice|photo)$/);
+  if (up && req.method === 'POST') {
     const buf = await req.arrayBuffer();
     if (!buf.byteLength || buf.byteLength > 15e6) return json({ error: 'too big' }, 400);
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const type = req.headers.get('content-type') || 'audio/mp4';
-    await env.DATA.put(`vnote:${id}`, buf, { metadata: { type } });
+    const isVoice = up[1] === 'voice';
+    const type = req.headers.get('content-type') || (isVoice ? 'audio/mp4' : 'image/jpeg');
+    await env.DATA.put(`${isVoice ? 'vnote' : 'nphoto'}:${id}`, buf, { metadata: { type } });
     const notes = await load(env, 'notes', []);
-    notes.push({ itemId: url.searchParams.get('itemId') || null, voice: id, at: new Date().toISOString() });
+    notes.push({ itemId: url.searchParams.get('itemId') || null, [up[1]]: id, at: new Date().toISOString() });
     await save(env, 'notes', notes);
     return json({ ok: true });
   }

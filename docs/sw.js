@@ -1,7 +1,7 @@
 // Keeps the app shell and art on the phone, and rings the little bells.
 // Surprises themselves are never cached here: they always come from the server.
-var CACHE = 'para-ti-v1';
-var SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'art.js', 'config.js', 'art/splash.jpg', 'art/map.jpg'];
+var CACHE = 'para-ti-v2';
+var SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'art.js', 'config.js', 'art/splash.jpg', 'art/map.jpg', 'art/nook.jpg'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));

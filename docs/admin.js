@@ -232,6 +232,7 @@ function renderNotes() {
       ${n.itemId && titles[n.itemId] ? ` · on “${esc(titles[n.itemId])}”` : ''}</span>
       ${n.text ? `<div class="t">${esc(n.text)}</div>` : ''}
       ${n.voice ? `<div class="media"><audio controls preload="none" src="${API}/api/admin/voice/${n.voice}?k=${encodeURIComponent(key)}"></audio></div>` : ''}
+      ${n.photo ? `<div class="media"><a href="${API}/api/admin/nphoto/${n.photo}?k=${encodeURIComponent(key)}" target="_blank"><img src="${API}/api/admin/nphoto/${n.photo}?k=${encodeURIComponent(key)}" alt="" style="max-width:100%;border-radius:6px"></a></div>` : ''}
     </div>`).join('') : '<p class="muted">Nothing yet.</p>';
 }
 

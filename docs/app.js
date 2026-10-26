@@ -231,7 +231,7 @@
 
   function lockedScreen(t) {
     app.innerHTML =
-      '<div class="screen full wood"><a class="back" href="#/">‹</a><div class="item-wrap fade-in">' +
+      '<div class="screen full nook"><a class="back" href="#/">‹</a><div class="item-wrap fade-in">' +
       '<div class="hero">' + ART.img(ART.look(t.type).waiting) + '</div>' +
       '<div class="card"><h2>' + esc(WHAT[t.type] || t.title).toUpperCase() + '</h2>' +
       '<div class="opens">⟶ Opens in ⟵</div><div class="count" id="count"></div></div>' +
@@ -256,7 +256,7 @@
     clearTimers();
     var lk = ART.look(t.type);
     app.innerHTML =
-      '<div class="screen full wood"><a class="back" href="#/">‹</a><div class="item-wrap fade-in">' +
+      '<div class="screen full nook"><a class="back" href="#/">‹</a><div class="item-wrap fade-in">' +
       '<div class="hero tappable kind-' + t.type + '" id="open">' + ART.img(lk.open, 'opened') +
       (t.type === 'letter' ? ART.img('parchment', 'rising') : '<span class="sparkles"><i></i><i></i><i></i><i></i><i></i></span>') +
       ART.img(lk.sealed, 'closed') + (t.type === 'letter' ? ART.img('seal-heart', 'pop') : '') + '</div>' +
@@ -416,9 +416,10 @@
   function noteSheet(itemId) {
     sheet.innerHTML = '<div class="panel"><h3>A LITTLE NOTE ♥</h3><textarea id="nt" placeholder="write anything…"></textarea>' +
       (canRecord() ? '<div class="rec"><button class="rec-btn" id="rec">🎙 or say it out loud</button><span id="rect"></span></div>' : '') +
+      '<div class="rec"><label class="rec-btn">📷 add a photo<input id="np" type="file" accept="image/*" hidden></label><div id="npv"></div></div>' +
       '<div class="row-btns"><button class="link-btn" id="nc">cancel</button><button class="ribbon-btn small" id="ns">SEND</button></div></div>';
     sheet.hidden = false;
-    var recorded = null, recorder = null, stream = null, started = 0, clock = null;
+    var recorded = null, recorder = null, stream = null, started = 0, clock = null, photo = null;
     var stopStream = function () { if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; };
     var cancel = function () { if (recorder && recorder.state !== 'inactive') recorder.stop(); stopStream(); clearInterval(clock); closeSheet(); };
     document.getElementById('nc').onclick = cancel;
@@ -448,22 +449,55 @@
       }).catch(function () { label.textContent = ' (no microphone access)'; });
     };
 
+    document.getElementById('np').onchange = function () {
+      var f = this.files && this.files[0];
+      if (!f) return;
+      var prev = document.getElementById('npv');
+      prev.textContent = ' …';
+      shrinkPhoto(f).then(function (b) {
+        photo = b;
+        prev.innerHTML = '<img class="np-thumb" src="' + URL.createObjectURL(b) + '" alt="">';
+      });
+    };
+
     document.getElementById('ns').onclick = function () {
       var text = document.getElementById('nt').value.trim();
-      if (!text && !recorded) return;
+      if (!text && !recorded && !photo) return;
+      var q = itemId ? '?itemId=' + itemId : '';
       var sends = [];
       if (text) sends.push(api('/api/notes', { method: 'POST', body: { itemId: itemId, text: text } }));
-      if (recorded) sends.push(api('/api/notes/voice' + (itemId ? '?itemId=' + itemId : ''), { method: 'POST', body: recorded }));
+      if (recorded) sends.push(api('/api/notes/voice' + q, { method: 'POST', body: recorded }));
+      if (photo) sends.push(api('/api/notes/photo' + q, { method: 'POST', body: photo }));
+      this.disabled = true;
       Promise.all(sends).then(function (rs) {
         var ok = rs.every(function (r) { return r.status === 200; });
+        var stamp = ['stamp-tent', 'stamp-wheel', 'stamp-horse'][Math.floor(Math.random() * 3)];
         sheet.querySelector('.panel').innerHTML = ok
-          ? '<h3>SENT ♥</h3><p style="font-style:italic">Folded up and on its way.</p>'
+          ? ART.img(stamp, 'sent-stamp') + '<h3>SENT ♥</h3><p style="font-style:italic">Stamped and on its way.</p>'
           : '<h3>Hmm</h3><p>It didn’t send. Try again?</p>';
         setTimeout(closeSheet, 1800);
       }).catch(function () { sheet.querySelector('.panel').innerHTML = '<h3>Hmm</h3><p>No connection. Try again?</p>'; setTimeout(closeSheet, 1800); });
     };
   }
   function closeSheet() { sheet.hidden = true; sheet.innerHTML = ''; }
+
+  // Phone photos are huge (and sometimes HEIC): redraw as a JPEG no wider than
+  // 2000px so it uploads fast and opens anywhere. Falls back to the original.
+  function shrinkPhoto(file) {
+    return new Promise(function (resolve) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var s = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (b) { resolve(b || file); }, 'image/jpeg', 0.85);
+      };
+      img.onerror = function () { resolve(file); };
+      img.src = url;
+    });
+  }
 
   // Coming back to the app after a while: refresh what's ready.
   document.addEventListener('visibilitychange', function () {
