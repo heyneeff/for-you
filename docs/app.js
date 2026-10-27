@@ -164,7 +164,12 @@
     }).catch(function () { return 'The bells got tangled. Try again from the More tab.'; });
   }
 
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+  if ('serviceWorker' in navigator) {
+    // A new version took over (after a push): reload once so she sees it.
+    var hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', function () { if (hadController) location.reload(); });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(function () {});
+  }
 
   // ----------------------------------------------------------- item screen --
   function itemScreen(id) {

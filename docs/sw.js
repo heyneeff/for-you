@@ -1,6 +1,6 @@
 // Keeps the app shell and art on the phone, and rings the little bells.
 // Surprises themselves are never cached here: they always come from the server.
-var CACHE = 'para-ti-v6';
+var CACHE = 'para-ti-v7';
 var SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'art.js', 'config.js', 'art/room.jpg'];
 
 self.addEventListener('install', function (e) {
@@ -13,10 +13,11 @@ self.addEventListener('activate', function (e) {
 });
 
 // Same-origin files: network first so updates land, cache when offline.
+// no-cache skips the browser's 10-minute copy, so a push shows up right away.
 self.addEventListener('fetch', function (e) {
   var url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
-  e.respondWith(fetch(e.request).then(function (res) {
+  e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(function (res) {
     var copy = res.clone();
     caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
     return res;
