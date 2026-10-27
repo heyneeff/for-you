@@ -50,6 +50,7 @@
     return api('/api/items').then(function (res) {
       if (res.status === 401) { setKey(''); render(); throw new Error('locked out'); }
       state.items = res.data.items || [];
+      state.layout = res.data.layout || {};
       state.skew = Date.parse(res.data.now) - Date.now();
       state.loaded = true;
       return state.items;
@@ -331,12 +332,20 @@
       var count = {}, looks = {};
       kept.forEach(function (i) { count[i.type] = (count[i.type] || 0) + 1; looks[i.id] = ART.keepsake(i, count[i.type] - 1); });
       var next = items.filter(function (i) { return !i.opened; })[0];
-      var shown = kept.slice(-ART.SPOTS.length), extra = kept.slice(0, kept.length - shown.length);
       var sub = next && next.unlocked ? 'Something is waiting for you ♥'
         : next ? 'Something is on its way…'
-        : kept.length ? 'Tap anything to open it again' : 'Everything you open will be kept here ♥';
-      var things = shown.map(function (it, i) {
-        return '<a class="keep" href="#/item/' + it.id + '" style="' + ART.place(ART.SPOTS[i]) + '" aria-label="' + esc(it.title) + '">' +
+        : kept.length ? 'Tap to open, drag to rearrange' : 'Everything you open will be kept here ♥';
+      // Where she left each one, else the next free spot (a little offset
+      // once the spots run out, so nothing hides exactly behind another).
+      var free = 0;
+      var things = kept.map(function (it) {
+        var at = state.layout[it.id];
+        if (!at) {
+          var sp = ART.SPOTS[free % ART.SPOTS.length], lap = Math.floor(free / ART.SPOTS.length);
+          at = [sp[0] + lap * 40, sp[1] + lap * 18];
+          free++;
+        }
+        return '<a class="keep" href="#/item/' + it.id + '" data-id="' + it.id + '" data-x="' + at[0] + '" data-y="' + at[1] + '" style="' + ART.place(at) + '" aria-label="' + esc(it.title) + '">' +
           ART.img(looks[it.id]) + '</a>';
       }).join('');
       var waiting = next ? '<a class="keep cushion' + (next.unlocked ? ' ready' : '') + '" href="#/item/' + next.id + '" style="' + ART.place(ART.CUSHION) + '">' +
@@ -345,17 +354,57 @@
         '<div class="screen room-screen">' +
         '<div class="home-head fade-in"><div class="hh">♥</div><div class="sub">' + sub + '</div></div>' +
         '<div class="room"><div class="stage"><img class="room-art" src="art/room.jpg" alt="">' + waiting + things + '</div></div>' +
-        (extra.length ? '<div class="list-screen room-more"><h1>KEPT EARLIER</h1>' + extra.reverse().map(function (i) {
-          return '<a class="row" href="#/item/' + i.id + '"><span class="ic">' + ART.img(looks[i.id]) + '</span>' +
-            '<span class="tx"><div class="t">' + esc(i.title) + '</div><div class="d">' + fmtDate(i.unlockAt) + '</div></span><span class="chev">›</span></a>';
-        }).join('') + '</div>' : '') +
         '</div>' + banners();
       wireBanners();
+      wireDrag(app.querySelector('.stage'));
       // When the next one is due, refresh so it wakes up on the cushion.
       if (next && !next.unlocked) {
         timers.push(setInterval(function () { if (Date.parse(next.unlockAt) <= now()) home(); }, 1000));
       }
     }).catch(offline);
+  }
+
+  // She can drag her keepsakes anywhere in the room. A short tap still opens
+  // one; once a finger moves it's a drag, and the spot is saved on the server
+  // so the room stays the way she left it.
+  function wireDrag(stage) {
+    var d = null, justDragged = false, B = ART.BOUNDS;
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+    stage.addEventListener('pointerdown', function (e) {
+      var el = e.target.closest ? e.target.closest('.keep') : null;
+      if (!el || /cushion/.test(el.className)) return;
+      d = { el: el, id: el.getAttribute('data-id'), sx: e.clientX, sy: e.clientY, moved: false,
+        x: +el.getAttribute('data-x'), y: +el.getAttribute('data-y') };
+      if (el.setPointerCapture) el.setPointerCapture(e.pointerId);
+    });
+    stage.addEventListener('pointermove', function (e) {
+      if (!d) return;
+      var dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+      if (!d.moved && Math.abs(dx) + Math.abs(dy) < 8) return;
+      d.moved = true;
+      d.el.className = 'keep dragging';
+      var r = stage.getBoundingClientRect();
+      d.at = [clamp(d.x + dx * ART.ROOM_W / r.width, B.x0, B.x1), clamp(d.y + dy * ART.ROOM_H / r.height, B.y0, B.y1)];
+      d.el.setAttribute('style', ART.place(d.at));
+    });
+    function end() {
+      if (!d) return;
+      var done = d; d = null;
+      if (!done.moved) return;
+      justDragged = true;
+      done.el.className = 'keep';
+      if (!done.at) return;
+      var at = [Math.round(done.at[0]), Math.round(done.at[1])];
+      done.el.setAttribute('data-x', at[0]); done.el.setAttribute('data-y', at[1]);
+      state.layout[done.id] = at;
+      api('/api/layout', { method: 'POST', body: { id: done.id, x: at[0], y: at[1] } }).catch(function () {});
+    }
+    stage.addEventListener('pointerup', end);
+    stage.addEventListener('pointercancel', end);
+    // The tap that ends a drag shouldn't open the keepsake.
+    stage.addEventListener('click', function (e) {
+      if (justDragged) { e.preventDefault(); e.stopPropagation(); justDragged = false; }
+    }, true);
   }
 
   // ---------------------------------------------------------------- lists --

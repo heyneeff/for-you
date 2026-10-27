@@ -14,20 +14,25 @@ var ART = (function () {
   };
   function look(type) { return LOOK[type] || LOOK.letter; }
 
-  // The keepsake room on art/room.jpg (1024×1536). Each spot is [x, floor y,
-  // width as % of the painting]: the rug in front of the cushion fills first,
-  // then the floor behind it, then the window sill, the side table and the
-  // armchair. Whatever comes next waits on the cushion. Phones show roughly
-  // x 100–800, so spots stay inside that.
+  // The keepsake room on art/room.jpg (1024×1536). Each spot is [x, floor y]
+  // in the painting: the rug in front of the cushion fills first, then the
+  // floor behind it, then the window sill, the side table and the armchair.
+  // Whatever comes next waits on the cushion. Phones show roughly x 100–800,
+  // so spots stay inside that. She can drag keepsakes anywhere in BOUNDS.
   var ROOM_W = 1024, ROOM_H = 1536;
   var CUSHION = [455, 1010, 22];
   var SPOTS = [
-    [560, 1270, 13], [720, 1250, 11], [400, 1225, 11], [480, 1355, 12], [680, 1355, 11], [800, 1135, 9],
-    [310, 935, 8], [640, 925, 8],
-    [590, 702, 6], [215, 714, 6], [812, 818, 7],
+    [560, 1270], [720, 1250], [400, 1225], [480, 1355], [680, 1355], [800, 1135],
+    [310, 935], [640, 925],
+    [590, 702], [215, 714], [812, 818],
   ];
+  var BOUNDS = { x0: 60, x1: 964, y0: 690, y1: 1400 };
+  // Things look bigger the closer they sit to her: 6% wide on the sill,
+  // about 12.5% at the front of the rug.
+  function sizeAt(y) { return 6 + Math.max(0, y - 700) * 0.0099; }
   function place(spot) {
-    return 'left:' + (spot[0] / ROOM_W) * 100 + '%;top:' + (spot[1] / ROOM_H) * 100 + '%;width:' + spot[2] + '%;z-index:' + spot[1];
+    var w = spot[2] || sizeAt(spot[1]);
+    return 'left:' + (spot[0] / ROOM_W) * 100 + '%;top:' + (spot[1] / ROOM_H) * 100 + '%;width:' + w + '%;z-index:' + Math.round(spot[1]);
   }
   // Each opened surprise keeps its own little object: the nth letter she opened
   // always gets the nth letter keepsake, so they vary and never shuffle.
@@ -52,6 +57,6 @@ var ART = (function () {
 
   return {
     img: img, look: look, moon: moon,
-    place: place, keepsake: keepsake, CUSHION: CUSHION, SPOTS: SPOTS,
+    place: place, keepsake: keepsake, CUSHION: CUSHION, SPOTS: SPOTS, BOUNDS: BOUNDS, ROOM_W: ROOM_W, ROOM_H: ROOM_H,
   };
 })();

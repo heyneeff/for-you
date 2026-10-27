@@ -275,5 +275,8 @@ label.rec-btn { display: inline-block; cursor: pointer; }
 .keep .lbl { display: block; margin-bottom: 4px; text-align: center; font-style: italic; font-size: 13px; color: #fbe7b0; text-shadow: 0 1px 4px #000, 0 0 8px #000; white-space: nowrap; }
 @-webkit-keyframes bob-keep { 50% { -webkit-transform: translate(-50%, -84%); } }
 @keyframes bob-keep { 0%, 100% { transform: translate(-50%, -78%); } 50% { transform: translate(-50%, -84%); } }
-.room-more { min-height: 0; padding-top: 20px; }
+.keep:not(.cushion) { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.keep img { -webkit-user-drag: none; pointer-events: none; }
+.keep.dragging { z-index: 2000 !important; }
+.keep.dragging img { -webkit-transform: scale(1.12); transform: scale(1.12); -webkit-filter: drop-shadow(0 14px 12px rgba(0,0,0,.55)); filter: drop-shadow(0 14px 12px rgba(0,0,0,.55)); }
 .tabs button { min-width: 0; }

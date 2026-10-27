@@ -7,6 +7,7 @@
 //   notes        JSON array of little notes she leaves
 //   vnote:<id>   her voice notes; nphoto:<id> photos she sends back
 //   opened       JSON object { <itemId>: isoTime } — when she first opened each
+//   layout       JSON object { <itemId>: [x, y] } — where she put each keepsake
 //   subs         JSON array of web-push subscriptions
 //
 // Secrets: RECIPIENT_KEY (her secret word), ADMIN_KEY (yours),
@@ -111,9 +112,9 @@ async function route(req, env) {
   if (path === '/api/hello') return json({ ok: true });
 
   if (path === '/api/items' && req.method === 'GET') {
-    const [items, opened] = await Promise.all([load(env, 'items', []), load(env, 'opened', {})]);
+    const [items, opened, layout] = await Promise.all([load(env, 'items', []), load(env, 'opened', {}), load(env, 'layout', {})]);
     items.sort((a, b) => Date.parse(a.unlockAt) - Date.parse(b.unlockAt));
-    return json({ items: items.map((i) => teaser(i, opened)), now: new Date().toISOString() });
+    return json({ items: items.map((i) => teaser(i, opened)), layout, now: new Date().toISOString() });
   }
 
   const one = path.match(/^\/api\/items\/([\w-]+)$/);
@@ -151,6 +152,16 @@ async function route(req, env) {
     const notes = await load(env, 'notes', []);
     notes.push({ itemId: url.searchParams.get('itemId') || null, [up[1]]: id, at: new Date().toISOString() });
     await save(env, 'notes', notes);
+    return json({ ok: true });
+  }
+
+  // She moved a keepsake in her room.
+  if (path === '/api/layout' && req.method === 'POST') {
+    const { id, x, y } = await req.json();
+    if (!/^[\w-]+$/.test(String(id)) || !Number.isFinite(x) || !Number.isFinite(y)) return json({ error: 'bad spot' }, 400);
+    const layout = await load(env, 'layout', {});
+    layout[id] = [Math.round(x), Math.round(y)];
+    await save(env, 'layout', layout);
     return json({ ok: true });
   }
 
@@ -210,6 +221,8 @@ async function adminRoute(req, env, path) {
     await env.DATA.delete(`audio:${m[1]}`);
     const opened = await load(env, 'opened', {});
     if (opened[m[1]]) (delete opened[m[1]], await save(env, 'opened', opened));
+    const layout = await load(env, 'layout', {});
+    if (layout[m[1]]) (delete layout[m[1]], await save(env, 'layout', layout));
     return json({ ok: true });
   }
 
