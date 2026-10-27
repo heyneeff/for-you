@@ -48,7 +48,7 @@
 
   function loadItems() {
     return api('/api/items').then(function (res) {
-      if (res.status === 401) { setKey(''); entered = false; go('#/'); throw new Error('locked out'); }
+      if (res.status === 401) { setKey(''); render(); throw new Error('locked out'); }
       state.items = res.data.items || [];
       state.skew = Date.parse(res.data.now) - Date.now();
       state.loaded = true;
@@ -59,7 +59,6 @@
   function go(hash) { if (location.hash === hash) render(); else location.hash = hash; }
 
   // --------------------------------------------------------------- router --
-  var entered = false;
   var backTo = '#/'; // where ‹ goes from a surprise: the room or a list
   function render() {
     clearTimers();
@@ -67,7 +66,7 @@
     stopAudio();
     window.scrollTo(0, 0);
     var h = location.hash || '#/';
-    if (!entered || !getKey()) return h === '#/word' ? whisper() : splash();
+    if (!getKey()) return whisper();
     var m;
     if (h === '#/' || h === '#/home') return home();
     if ((m = h.match(/^#\/item\/([\w-]+)$/))) return itemScreen(m[1]);
@@ -90,17 +89,7 @@
     go(t === 'home' ? '#/' : t === 'more' ? '#/more' : '#/list/' + t);
   });
 
-  // --------------------------------------------------------------- splash --
-  function splash() {
-    setTab(null);
-    app.innerHTML =
-      '<div class="screen full splash"><img class="splash-art fade-in" src="art/splash.jpg" alt="">' +
-      '<div class="enter"><button class="ribbon-btn" id="enter">ENTER</button></div></div>';
-    document.getElementById('enter').onclick = function () {
-      if (getKey()) { entered = true; go('#/'); } else go('#/word');
-    };
-  }
-
+  // ---------------------------------------------------------- secret word --
   function whisper() {
     setTab(null);
     app.innerHTML =
@@ -114,7 +103,7 @@
       if (!w) return;
       setKey(w);
       api('/api/hello').then(function (r) {
-        if (r.status === 200) { entered = true; go('#/'); }
+        if (r.status === 200) go('#/');
         else { setKey(''); document.getElementById('err').textContent = 'Not quite… try again ♥'; }
       }).catch(function () { setKey(''); document.getElementById('err').textContent = 'No connection. Try again in a moment.'; });
     };
@@ -355,7 +344,7 @@
       app.innerHTML =
         '<div class="screen room-screen">' +
         '<div class="home-head fade-in"><h1>' + greeting() + '</h1><div class="hh">♥</div><div class="sub">' + sub + '</div></div>' +
-        '<div class="room"><img class="room-art" src="art/nook.jpg" alt="">' + waiting + things + '</div>' +
+        '<div class="room"><div class="stage"><img class="room-art" src="art/room.jpg" alt="">' + waiting + things + '</div></div>' +
         (extra.length ? '<div class="list-screen room-more"><h1>KEPT EARLIER</h1>' + extra.reverse().map(function (i) {
           return '<a class="row" href="#/item/' + i.id + '"><span class="ic">' + ART.img(looks[i.id]) + '</span>' +
             '<span class="tx"><div class="t">' + esc(i.title) + '</div><div class="d">' + fmtDate(i.unlockAt) + '</div></span><span class="chev">›</span></a>';
@@ -406,12 +395,10 @@
     app.innerHTML =
       '<div class="screen list-screen more fade-in"><h1>MORE</h1>' +
       '<div class="box">' + ART.img('bell', 'box-ic') + '<b class="sc">Little bells</b><p>' + bells + '</p></div>' +
-      '<div class="box">' + ART.img('feather', 'box-ic') + '<b class="sc">A note for him</b><p>Anything on your heart, any time. Written or out loud.</p><button class="ribbon-btn small" id="note">WRITE A NOTE ♥</button></div>' +
-      '<div class="box" style="text-align:center"><button class="link-btn" id="splash">back to the beginning</button></div></div>';
+      '<div class="box">' + ART.img('feather', 'box-ic') + '<b class="sc">A note for him</b><p>Anything on your heart, any time. Written or out loud.</p><button class="ribbon-btn small" id="note">WRITE A NOTE ♥</button></div></div>';
     var b = document.getElementById('bells');
     if (b) b.onclick = function () { enableBells().then(function (msg) { b.parentNode.innerHTML = msg; }); };
     document.getElementById('note').onclick = function () { noteSheet(null); };
-    document.getElementById('splash').onclick = function () { entered = false; go('#/'); };
   }
 
   // ----------------------------------------------------------- note sheet --
@@ -506,10 +493,8 @@
 
   // Coming back to the app after a while: refresh what's ready.
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden && entered) { state.loaded = false; if ((location.hash || '#/') === '#/') render(); }
+    if (!document.hidden && getKey()) { state.loaded = false; if ((location.hash || '#/') === '#/') render(); }
   });
 
-  // Opened from a notification → skip the splash, straight to the room.
-  if (/[?&]from=bell/.test(location.search) && getKey()) entered = true;
   render();
 })();

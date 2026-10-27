@@ -14,16 +14,17 @@ var ART = (function () {
   };
   function look(type) { return LOOK[type] || LOOK.letter; }
 
-  // The keepsake room on art/nook.jpg (852×1846). Each spot is [x, floor y,
-  // width as % of the room]: the floor in front of the cushion fills first,
-  // then behind it, then the ledge under the window. Whatever comes next
-  // waits on the cushion.
-  var ROOM_W = 852, ROOM_H = 1846;
-  var CUSHION = [440, 1050, 30];
+  // The keepsake room on art/room.jpg (1024×1536). Each spot is [x, floor y,
+  // width as % of the painting]: the rug in front of the cushion fills first,
+  // then the floor behind it, then the window sill, the side table and the
+  // armchair. Whatever comes next waits on the cushion. Phones show roughly
+  // x 100–800, so spots stay inside that.
+  var ROOM_W = 1024, ROOM_H = 1536;
+  var CUSHION = [455, 1010, 22];
   var SPOTS = [
-    [430, 1330, 19], [615, 1310, 18], [235, 1315, 16], [380, 1495, 18], [575, 1475, 19], [690, 1610, 15],
-    [290, 925, 12], [590, 925, 12],
-    [260, 592, 10], [372, 592, 10], [508, 592, 10], [620, 592, 10],
+    [560, 1270, 13], [720, 1250, 11], [400, 1225, 11], [480, 1355, 12], [680, 1355, 11], [800, 1135, 9],
+    [310, 935, 8], [640, 925, 8],
+    [590, 702, 6], [215, 714, 6], [812, 818, 7],
   ];
   function place(spot) {
     return 'left:' + (spot[0] / ROOM_W) * 100 + '%;top:' + (spot[1] / ROOM_H) * 100 + '%;width:' + spot[2] + '%;z-index:' + spot[1];
