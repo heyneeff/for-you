@@ -112,11 +112,6 @@
   }
 
   // ----------------------------------------------------------------- home --
-  function greeting() {
-    var h = new Date().getHours();
-    return h < 5 ? 'Sweet dreams' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-  }
-
   function offline(err) {
     if (String(err && err.message) === 'locked out') return;
     app.innerHTML = '<div class="screen full whisper">' + ART.moon(70) + '<h2>The stars are out of reach</h2><p>Check your connection and try again.</p>' +
@@ -325,7 +320,7 @@
   // she has opened stays here, and whatever comes next waits on the cushion.
   function home() {
     setTab('home');
-    app.innerHTML = '<div class="screen room-screen"><div class="home-head"><h1>' + greeting() + '</h1></div></div>';
+    app.innerHTML = '<div class="screen room-screen"></div>';
     loadItems().then(function (items) {
       var kept = items.filter(function (i) { return i.opened; });
       var count = {}, looks = {};
@@ -343,7 +338,7 @@
         '<span class="lbl">' + (next.unlocked ? 'ready for you ♥' : fmtDate(next.unlockAt)) + '</span>' + ART.img(ART.look(next.type).waiting) + '</a>' : '';
       app.innerHTML =
         '<div class="screen room-screen">' +
-        '<div class="home-head fade-in"><h1>' + greeting() + '</h1><div class="hh">♥</div><div class="sub">' + sub + '</div></div>' +
+        '<div class="home-head fade-in"><div class="hh">♥</div><div class="sub">' + sub + '</div></div>' +
         '<div class="room"><div class="stage"><img class="room-art" src="art/room.jpg" alt="">' + waiting + things + '</div></div>' +
         (extra.length ? '<div class="list-screen room-more"><h1>KEPT EARLIER</h1>' + extra.reverse().map(function (i) {
           return '<a class="row" href="#/item/' + i.id + '"><span class="ic">' + ART.img(looks[i.id]) + '</span>' +
