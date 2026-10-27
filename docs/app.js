@@ -60,6 +60,7 @@
 
   // --------------------------------------------------------------- router --
   var entered = false;
+  var backTo = '#/'; // where ‹ goes from a surprise: the map, a list, or the room
   function render() {
     clearTimers();
     closeSheet();
@@ -70,6 +71,8 @@
     var m;
     if (h === '#/' || h === '#/home') return home();
     if ((m = h.match(/^#\/item\/([\w-]+)$/))) return itemScreen(m[1]);
+    backTo = h;
+    if (h === '#/room') return roomScreen();
     if ((m = h.match(/^#\/list\/(letter|place|gift)$/))) return listScreen(m[1]);
     if (h === '#/more') return moreScreen();
     return home();
@@ -85,7 +88,7 @@
     var b = e.target.closest ? e.target.closest('button') : null;
     if (!b) return;
     var t = b.getAttribute('data-tab');
-    go(t === 'home' ? '#/' : t === 'more' ? '#/more' : '#/list/' + t);
+    go(t === 'home' ? '#/' : t === 'more' ? '#/more' : t === 'room' ? '#/room' : '#/list/' + t);
   });
 
   // --------------------------------------------------------------- splash --
@@ -362,6 +365,38 @@
     if (c) c.onclick = function () {
       if (navigator.clipboard) navigator.clipboard.writeText(g.code).then(function () { c.textContent = 'copied ♥'; setTimeout(function () { c.textContent = g.code; }, 1500); });
     };
+  }
+
+  // ----------------------------------------------------------------- room --
+  // The fortune-teller's nook, kept as her keepsake room: everything she has
+  // opened stays here, and whatever comes next waits on the cushion.
+  function roomScreen() {
+    setTab('room');
+    app.innerHTML = '<div class="screen room-screen"></div>';
+    loadItems().then(function (items) {
+      var kept = items.filter(function (i) { return i.opened; });
+      var count = {}, looks = {};
+      kept.forEach(function (i) { count[i.type] = (count[i.type] || 0) + 1; looks[i.id] = ART.keepsake(i, count[i.type] - 1); });
+      var next = items.filter(function (i) { return !i.opened; })[0];
+      var shown = kept.slice(-ART.SPOTS.length), extra = kept.slice(0, kept.length - shown.length);
+      var sub = !kept.length ? 'Everything you open will be kept here ♥'
+        : 'Tap anything to open it again';
+      var things = shown.map(function (it, i) {
+        return '<a class="keep" href="#/item/' + it.id + '" style="' + ART.place(ART.SPOTS[i]) + '" aria-label="' + esc(it.title) + '">' +
+          ART.img(looks[it.id]) + '</a>';
+      }).join('');
+      var waiting = next ? '<a class="keep cushion' + (next.unlocked ? ' ready' : '') + '" href="#/item/' + next.id + '" style="' + ART.place(ART.CUSHION) + '">' +
+        '<span class="lbl">' + (next.unlocked ? 'ready for you ♥' : fmtDate(next.unlockAt)) + '</span>' + ART.img(ART.look(next.type).waiting) + '</a>' : '';
+      app.innerHTML =
+        '<div class="screen room-screen">' +
+        '<div class="home-head fade-in"><h1>Keepsakes</h1><div class="hh">♥</div><div class="sub">' + sub + '</div></div>' +
+        '<div class="room"><img class="room-art" src="art/nook.jpg" alt="">' + waiting + things + '</div>' +
+        (extra.length ? '<div class="list-screen room-more"><h1>KEPT EARLIER</h1>' + extra.reverse().map(function (i) {
+          return '<a class="row" href="#/item/' + i.id + '"><span class="ic">' + ART.img(looks[i.id]) + '</span>' +
+            '<span class="tx"><div class="t">' + esc(i.title) + '</div><div class="d">' + fmtDate(i.unlockAt) + '</div></span><span class="chev">›</span></a>';
+        }).join('') + '</div>' : '') +
+        '</div>';
+    }).catch(offline);
   }
 
   // ---------------------------------------------------------------- lists --
