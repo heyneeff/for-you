@@ -60,7 +60,7 @@
 
   // --------------------------------------------------------------- router --
   var entered = false;
-  var backTo = '#/'; // where ‹ goes from a surprise: the map, a list, or the room
+  var backTo = '#/'; // where ‹ goes from a surprise: the room or a list
   function render() {
     clearTimers();
     closeSheet();
@@ -72,7 +72,6 @@
     if (h === '#/' || h === '#/home') return home();
     if ((m = h.match(/^#\/item\/([\w-]+)$/))) return itemScreen(m[1]);
     backTo = h;
-    if (h === '#/room') return roomScreen();
     if ((m = h.match(/^#\/list\/(letter|place|gift)$/))) return listScreen(m[1]);
     if (h === '#/more') return moreScreen();
     return home();
@@ -88,7 +87,7 @@
     var b = e.target.closest ? e.target.closest('button') : null;
     if (!b) return;
     var t = b.getAttribute('data-tab');
-    go(t === 'home' ? '#/' : t === 'more' ? '#/more' : t === 'room' ? '#/room' : '#/list/' + t);
+    go(t === 'home' ? '#/' : t === 'more' ? '#/more' : '#/list/' + t);
   });
 
   // --------------------------------------------------------------- splash --
@@ -127,41 +126,6 @@
   function greeting() {
     var h = new Date().getHours();
     return h < 5 ? 'Sweet dreams' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-  }
-
-  function home() {
-    setTab('home');
-    app.innerHTML = '<div class="screen home"><div class="home-head"><h1>' + greeting() + '</h1></div></div>';
-    loadItems().then(function (items) {
-      var spots = ART.pins(items.length);
-      var next = items.filter(function (i) { return !i.unlocked; })[0];
-      var ready = items.filter(function (i) { return i.unlocked && !i.opened; });
-      var sub = ready.length ? 'Something is waiting for you ♥' : next ? 'Something is on its way…' : items.length ? 'Every surprise so far, all yours' : 'The path is ready ♥';
-      var pins = items.map(function (it, i) {
-        var cls = it.unlocked ? (it.opened ? 'pin' : 'pin ready') : 'pin locked';
-        return '<a class="' + cls + '" id="pin-' + it.id + '" href="#/item/' + it.id + '" style="left:' + spots[i].left + '%;top:' + spots[i].top + '%">' +
-          ART.img(ART.look(it.type).pin) + '<span class="lbl">' + (it.unlocked ? esc(it.title) : fmtDate(it.unlockAt)) + '</span></a>';
-      }).join('');
-      app.innerHTML =
-        '<div class="screen home">' +
-        '<div class="home-head fade-in"><h1>' + greeting() + '</h1><div class="hh">♥</div><div class="sub">' + sub + '</div></div>' +
-        '<div class="map"><img class="map-art" src="art/map.jpg" alt="">' + pins + '</div>' +
-        '</div>' + banners();
-      wireBanners();
-      // Start the view on what matters now: the one waiting, else the next one.
-      var focus = ready[0] || next || items[items.length - 1];
-      var mapImg = app.querySelector('.map-art');
-      var scrollToFocus = function () {
-        var el = focus ? document.getElementById('pin-' + focus.id) : null;
-        var y = el ? el.getBoundingClientRect().top + window.pageYOffset - window.innerHeight * 0.55 : document.body.scrollHeight;
-        window.scrollTo(0, Math.max(0, y));
-      };
-      if (mapImg.complete) scrollToFocus(); else mapImg.onload = scrollToFocus;
-      // When the next one is due, refresh so its pin wakes up.
-      if (next) {
-        timers.push(setInterval(function () { if (Date.parse(next.unlockAt) <= now()) home(); }, 1000));
-      }
-    }).catch(offline);
   }
 
   function offline(err) {
@@ -367,20 +331,21 @@
     };
   }
 
-  // ----------------------------------------------------------------- room --
-  // The fortune-teller's nook, kept as her keepsake room: everything she has
-  // opened stays here, and whatever comes next waits on the cushion.
-  function roomScreen() {
-    setTab('room');
-    app.innerHTML = '<div class="screen room-screen"></div>';
+  // ----------------------------------------------------------------- home --
+  // Home is the fortune-teller's nook, kept as her keepsake room: everything
+  // she has opened stays here, and whatever comes next waits on the cushion.
+  function home() {
+    setTab('home');
+    app.innerHTML = '<div class="screen room-screen"><div class="home-head"><h1>' + greeting() + '</h1></div></div>';
     loadItems().then(function (items) {
       var kept = items.filter(function (i) { return i.opened; });
       var count = {}, looks = {};
       kept.forEach(function (i) { count[i.type] = (count[i.type] || 0) + 1; looks[i.id] = ART.keepsake(i, count[i.type] - 1); });
       var next = items.filter(function (i) { return !i.opened; })[0];
       var shown = kept.slice(-ART.SPOTS.length), extra = kept.slice(0, kept.length - shown.length);
-      var sub = !kept.length ? 'Everything you open will be kept here ♥'
-        : 'Tap anything to open it again';
+      var sub = next && next.unlocked ? 'Something is waiting for you ♥'
+        : next ? 'Something is on its way…'
+        : kept.length ? 'Tap anything to open it again' : 'Everything you open will be kept here ♥';
       var things = shown.map(function (it, i) {
         return '<a class="keep" href="#/item/' + it.id + '" style="' + ART.place(ART.SPOTS[i]) + '" aria-label="' + esc(it.title) + '">' +
           ART.img(looks[it.id]) + '</a>';
@@ -389,13 +354,18 @@
         '<span class="lbl">' + (next.unlocked ? 'ready for you ♥' : fmtDate(next.unlockAt)) + '</span>' + ART.img(ART.look(next.type).waiting) + '</a>' : '';
       app.innerHTML =
         '<div class="screen room-screen">' +
-        '<div class="home-head fade-in"><h1>Keepsakes</h1><div class="hh">♥</div><div class="sub">' + sub + '</div></div>' +
+        '<div class="home-head fade-in"><h1>' + greeting() + '</h1><div class="hh">♥</div><div class="sub">' + sub + '</div></div>' +
         '<div class="room"><img class="room-art" src="art/nook.jpg" alt="">' + waiting + things + '</div>' +
         (extra.length ? '<div class="list-screen room-more"><h1>KEPT EARLIER</h1>' + extra.reverse().map(function (i) {
           return '<a class="row" href="#/item/' + i.id + '"><span class="ic">' + ART.img(looks[i.id]) + '</span>' +
             '<span class="tx"><div class="t">' + esc(i.title) + '</div><div class="d">' + fmtDate(i.unlockAt) + '</div></span><span class="chev">›</span></a>';
         }).join('') + '</div>' : '') +
-        '</div>';
+        '</div>' + banners();
+      wireBanners();
+      // When the next one is due, refresh so it wakes up on the cushion.
+      if (next && !next.unlocked) {
+        timers.push(setInterval(function () { if (Date.parse(next.unlockAt) <= now()) home(); }, 1000));
+      }
     }).catch(offline);
   }
 
@@ -539,7 +509,7 @@
     if (!document.hidden && entered) { state.loaded = false; if ((location.hash || '#/') === '#/') render(); }
   });
 
-  // Opened from a notification → skip the splash, straight to the map.
+  // Opened from a notification → skip the splash, straight to the room.
   if (/[?&]from=bell/.test(location.search) && getKey()) entered = true;
   render();
 })();
